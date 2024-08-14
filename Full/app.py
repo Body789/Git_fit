@@ -58,19 +58,16 @@ def macros(cals, goal, weight):
         carbs = round((cals - (proteins * 4 + fats * 9)) / 4)
     return {"proteins": proteins, "carbs": carbs, "fats": fats}
 
-# Detect which PDF workout plan to download
-def detect(goal, level):
-    if level == 0:  # Beginner
-        if goal == 0:  # Lose weight
+# Detect workout plan
+def detect(goal,level):
+    if level == 0:
+        if goal == 0:
             return "one.pdf"
-        else:  # Gain weight
-            return "two.pdf"
-    else:  # Intermediate
-        if goal == 0:  # Lose weight
+        else: return "two.pdf"
+    else:
+        if goal == 0:
             return "three.pdf"
-        else:  # Gain weight
-            return "four.pdf"
-
+        else: return "four.pdf"
 # Route for the sign-up and login page
 @app.route('/')
 def index():
@@ -131,26 +128,40 @@ def submit_user_data():
     age = int(request.form.get('age'))
     activity_level = int(request.form.get('activity_level')) - 1  # Adjust to 0-4
 
+    # Mapping goal strings to integers
     goal_str = request.form.get('goal')
     goal_mapping = {'maintain': 0, 'cutting': 1, 'bulking': 2}
     goal = goal_mapping.get(goal_str.lower(), 0)  # Default to 'maintain'
 
     user_type = int(request.form.get('user_type'))  # 0: Normal, 1: New bodybuilder
+    training_goal = int(request.form.get("training_goal")) # 0: lose fats, 1: gain muscles
+    training_level = int(request.form.get("training_level")) # 0: new beginner, 1: intermediate
 
+    # Calculate BMR
     bmr = bmr_calc(weight, height, age)
+
+    # Calculate calories based on goal and activity level
     total_cals = cals(goal, activity_level, bmr)
+
+    # Calculate macronutrients
     macro_data = macros(total_cals, user_type, weight)
 
+    # detect workout plan
+    pdf_file = detect(training_goal, training_level)
+    # Save the user data
     user_info = load_user_info()
     user_info['user_data'] = {
         'weight': weight,
         'height': height,
         'age': age,
-        'activity_level': activity_level + 1,
+        'activity_level': activity_level + 1,  # Adjust back to 1-5
         'goal': goal_str,
         'bmr': bmr,
         'total_cals': total_cals,
-        'macros': macro_data
+        'macros': macro_data,
+        'training_level': training_level,
+        'training_goal': training_goal,
+        'pdf_file':pdf_file
     }
     save_user_info(user_info)
 
@@ -162,16 +173,21 @@ def submit_user_data():
 def results():
     user_info = load_user_info().get('user_data', {})
     macros = user_info.get('macros', {})
-    goal = user_info.get('goal')
-    activity_level = user_info.get('activity_level')
-
-    # Determine the workout PDF based on goal and level
-    pdf_file = detect(goal, activity_level)
+    pdf_file = user_info.get('pdf_file',{})
     return render_template('results.html', macros=macros, pdf_file=pdf_file)
 
 # Route to download the selected PDF
 @app.route('/download/<filename>')
 def download(filename):
+    # Print the folder and filename for debugging
+    print(f"Attempting to download file: {filename} from folder: {pdf_folder}")
+    
+    # Ensure the file exists
+    file_path = os.path.join(pdf_folder, filename)
+    if not os.path.isfile(file_path):
+        print(f"File not found: {file_path}")
+        return "File not found", 404
+
     return send_from_directory(pdf_folder, filename, as_attachment=True)
 
 if __name__ == '__main__':
