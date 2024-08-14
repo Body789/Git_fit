@@ -48,14 +48,9 @@ def cals(goal, level, bmr):
 
 # Macronutrients calculation based on calories, goal, and weight
 def macros(cals, goal, weight):
-    if goal == 0:  # Normal person
-        proteins = round(weight * 0.8)
-        fats = round(cals * 0.3 / 9)
-        carbs = round((cals - (proteins * 4 + fats * 9)) / 4)
-    else:  # New bodybuilder
-        proteins = round(weight * 2)
-        fats = round(cals * 0.3 / 9)
-        carbs = round((cals - (proteins * 4 + fats * 9)) / 4)
+    proteins = round(weight * 2)
+    fats = round(cals * 0.3 / 9)
+    carbs = round((cals - (proteins * 4 + fats * 9)) / 4)
     return {"proteins": proteins, "carbs": carbs, "fats": fats}
 
 # Detect workout plan
@@ -132,8 +127,6 @@ def submit_user_data():
     goal_str = request.form.get('goal')
     goal_mapping = {'maintain': 0, 'cutting': 1, 'bulking': 2}
     goal = goal_mapping.get(goal_str.lower(), 0)  # Default to 'maintain'
-
-    user_type = int(request.form.get('user_type'))  # 0: Normal, 1: New bodybuilder
     training_goal = int(request.form.get("training_goal")) # 0: lose fats, 1: gain muscles
     training_level = int(request.form.get("training_level")) # 0: new beginner, 1: intermediate
 
@@ -144,7 +137,7 @@ def submit_user_data():
     total_cals = cals(goal, activity_level, bmr)
 
     # Calculate macronutrients
-    macro_data = macros(total_cals, user_type, weight)
+    macro_data = macros(total_cals, goal, weight)
 
     # detect workout plan
     pdf_file = detect(training_goal, training_level)
